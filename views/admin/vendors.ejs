@@ -1,13 +1,13 @@
 <%- include('./partials/layout-header', { title: 'Vendors', currentPage: 'admin' }) %>
 
 <div class="content-header">
-    <h1><i class="fas fa-building"></i> Vendor Management</h1>
-    <p>View, manage, and control vendor accounts</p>
+    <h1><i class="fas fa-building"></i> Client Management</h1>
+    <p>View, manage, and control client accounts</p>
 </div>
 
 <div class="filter-bar">
     <div class="filter-bar-section" style="flex:1;">
-        <input id="vendor-search" class="form-input" placeholder="Search by company, email or vendor ID..." />
+        <input id="vendor-search" class="form-input" placeholder="Search by company, email or client ID..." />
     </div>
     <div class="filter-bar-section">
         <select id="vendor-filter" class="form-input">
@@ -24,13 +24,13 @@
         </select>
     </div>
     <a href="/admin/vendors/create" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Create Vendor
+        <i class="fas fa-plus"></i> Create Client
     </a>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <h3>Vendors (<span id="vendor-count"><%= vendors.length %></span>)</h3>
+        <h3>Clients (<span id="vendor-count"><%= vendors.length %></span>)</h3>
         <div class="muted">Page <span id="current-page">1</span> of <span id="total-pages">1</span></div>
     </div>
     <div class="card-content">

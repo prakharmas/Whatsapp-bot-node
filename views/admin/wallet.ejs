@@ -2,12 +2,12 @@
 
 <div class="content-header">
     <h1><i class="fas fa-wallet"></i> Wallet Management</h1>
-    <p>Manage vendor wallet balances and top-ups</p>
+    <p>Manage client wallet balances and top-ups</p>
 </div>
 
 <div class="filter-bar">
     <div class="filter-bar-section" style="flex:1;">
-        <input id="vendor-search" class="form-input" placeholder="Search vendors..." />
+        <input id="vendor-search" class="form-input" placeholder="Search clients..." />
     </div>
     <div class="filter-bar-section">
         <select id="balance-filter" class="form-input">
@@ -20,14 +20,14 @@
 
 <div class="card">
     <div class="card-header">
-        <h3>Vendor Wallets</h3>
+        <h3>Clients Wallets</h3>
         <div class="muted">Exchange Rate: 1 USD = ₹<span id="exchange-rate"><%= exchangeRate || 83 %></span></div>
     </div>
     <div class="card-content">
         <table class="table">
             <thead>
                 <tr>
-                    <th>Vendor</th>
+                    <th>Clients</th>
                     <th>Company</th>
                     <th>Balance (USD)</th>
                     <th>Balance (INR)</th>
@@ -74,7 +74,7 @@
         <div class="modal-body">
             <form id="topupForm">
                 <div class="form-group">
-                    <label>Vendor:</label>
+                    <label>Client:</label>
                     <div id="selectedVendor" class="form-display"></div>
                 </div>
                 

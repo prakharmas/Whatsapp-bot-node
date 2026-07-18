@@ -25,6 +25,8 @@ const vendorSchema = new mongoose.Schema({
     phone: { type: String },
     whatsapp_phone_id: { type: String },
     whatsapp_access_token: { type: String },
+    webhook_verify_token: { type: String },
+    whatsapp_app_secret: { type: String },
     business_id: { type: Number, default: 1 }, // Default business_id for SaaS
     agent_id: { type: Number, default: 1 }, // Default agent_id
     is_active: { type: Boolean, default: true }
