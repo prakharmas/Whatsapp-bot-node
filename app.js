@@ -94,6 +94,8 @@ app.get('/admin', requireAdmin, AdminController.dashboard);
 app.get('/admin/vendors', requireAdmin, AdminController.vendorList);
 app.get('/admin/vendors/create', requireAdmin, AdminController.vendorCreate);
 app.post('/admin/vendors/create', requireAdmin, AdminController.vendorStore);
+app.get('/admin/vendors/:vendorId/edit', requireAdmin, AdminController.vendorEdit);
+app.post('/admin/vendors/:vendorId/edit', requireAdmin, AdminController.vendorUpdate);
 app.get('/admin/vendors/:vendorId', requireAdmin, AdminController.vendorDetail);
 app.post('/admin/vendors/:vendorId/toggle', requireAdmin, AdminController.vendorToggle);
 app.get('/admin/wallet', requireAdmin, AdminController.walletManagement);

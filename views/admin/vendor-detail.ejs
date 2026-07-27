@@ -6,6 +6,9 @@
         <p>Client details and statistics</p>
     </div>
     <div class="header-actions">
+        <a href="/admin/vendors/<%= vendor.vendor_id %>/edit" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit
+        </a>
         <button class="btn btn-secondary" onclick="toggleVendor('<%= vendor.vendor_id %>')">
             <i class="fas fa-<%= vendor.is_active ? 'pause' : 'play' %>"></i>
             <%= vendor.is_active ? 'Deactivate' : 'Activate' %>
@@ -305,6 +308,11 @@
     background: var(--background-color);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
 }
 
 .btn:hover {

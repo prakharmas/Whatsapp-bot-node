@@ -182,6 +182,81 @@ class AdminController {
         }
     }
 
+    static async vendorEdit(req, res) {
+        try {
+            const vendor = await Vendor.findOne({ vendor_id: req.params.vendorId }).lean();
+            if (!vendor) return res.status(404).send('Vendor not found');
+
+            res.render('admin/vendor-edit', {
+                currentPage: 'admin',
+                vendor,
+                error: null,
+                admin: req.admin || { name: 'Admin', email: 'admin@system.com' }
+            });
+        } catch (error) {
+            console.error('Admin vendor edit error:', error);
+            res.status(500).send('Error loading vendor');
+        }
+    }
+
+    static async vendorUpdate(req, res) {
+        try {
+            const vendor = await Vendor.findOne({ vendor_id: req.params.vendorId });
+            if (!vendor) return res.status(404).send('Vendor not found');
+
+            const {
+                company_name, email, phone, password,
+                whatsapp_phone_id, whatsapp_access_token, webhook_verify_token, whatsapp_app_secret,
+                is_active
+            } = req.body;
+
+            const emailLower = email.toLowerCase();
+            const existing = await Vendor.findOne({ email: emailLower, vendor_id: { $ne: vendor.vendor_id } });
+            if (existing) {
+                return res.render('admin/vendor-edit', {
+                    currentPage: 'admin',
+                    vendor: { ...vendor.toObject(), ...req.body, email: emailLower },
+                    error: 'Email already exists',
+                    admin: req.admin || { name: 'Admin', email: 'admin@system.com' }
+                });
+            }
+
+            vendor.company_name = company_name;
+            vendor.email = emailLower;
+            vendor.phone = phone || '';
+            vendor.whatsapp_phone_id = whatsapp_phone_id;
+            vendor.whatsapp_access_token = whatsapp_access_token;
+            vendor.webhook_verify_token = webhook_verify_token;
+            vendor.whatsapp_app_secret = whatsapp_app_secret || '';
+            vendor.is_active = is_active === 'true';
+
+            if (password && password.trim()) {
+                vendor.password = password;
+            }
+
+            await vendor.save();
+            await saveAgentContext(
+                vendor.vendor_id,
+                vendor.business_id,
+                vendor.agent_id,
+                `${company_name} Support Agent`,
+                `You are ${company_name} WhatsApp assistant.`,
+                'admin'
+            );
+
+            res.redirect(`/admin/vendors/${vendor.vendor_id}`);
+        } catch (error) {
+            console.error('Admin update vendor error:', error);
+            const vendor = await Vendor.findOne({ vendor_id: req.params.vendorId }).lean();
+            res.render('admin/vendor-edit', {
+                currentPage: 'admin',
+                vendor: vendor ? { ...vendor, ...req.body } : req.body,
+                error: 'Failed to update client',
+                admin: req.admin || { name: 'Admin', email: 'admin@system.com' }
+            });
+        }
+    }
+
     static async vendorDetail(req, res) {
         try {
             const vendor = await Vendor.findOne({ vendor_id: req.params.vendorId }).lean();
