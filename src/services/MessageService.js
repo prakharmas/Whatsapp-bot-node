@@ -1,6 +1,7 @@
 const axios = require('axios');
 const path = require('path');
-const { createOrGetChatroom, saveMessage, Message, Vendor, getAgentContext } = require('../models/database');
+const { createOrGetChatroom, saveMessage, Message, Vendor, getAgentContext, lookupContactByPhone } = require('../models/database');
+const { WEEBO_PROMPT, buildCustomerContext } = require('./promptBuilder');
 const { transcribeAudio } = require('./ai/STTService');
 const { analyzeImage } = require('./ai/VisionService');
 const { PDFAnalysisService } = require('./ai/PDFAnalysisService');
@@ -113,6 +114,12 @@ class MessageService {
             // Get agent context
             const agentContextData = await getAgentContext(vendor.vendor_id, businessId, agentId);
             
+            // 🔥 LOOKUP CUSTOMER DATA FROM UPLOADED CONTACTS
+            const customerData = await lookupContactByPhone(vendor.vendor_id, from);
+            const customerContext = buildCustomerContext(customerData, from);
+            
+            console.log(`[CONTACT_LOOKUP] Phone: ${from}, Found: ${!!customerData}, Verified: ${customerContext.identityVerified}`);
+            
             // Get optimized conversation history
             const rawHistory = await this.getOptimizedHistory(chatroom._id, 8);
             console.log(`[HISTORY] Retrieved ${rawHistory.length} previous messages for context`);
@@ -150,28 +157,20 @@ class MessageService {
             }
             // Enhanced context with PDF analysis capabilities
             let contextText;
-            if (agentContextData) {
-                contextText = `SYSTEM INSTRUCTIONS:
-You are an intelligent WhatsApp assistant with advanced document analysis capabilities. 
-
-IMPORTANT CAPABILITIES:
-- You CAN analyze PDF documents (bills, invoices, receipts, contracts)
-- You CAN analyze images and extract information
-- You CAN transcribe and understand audio messages
-- You have access to document content and can answer questions about uploaded files
-
-When users upload documents:
-1. Acknowledge that you've analyzed the document
-2. Reference specific information from the document
-3. Answer questions based on document content
-4. Provide helpful assistance related to the document
-
-CRITICAL: Always respond in the SAME LANGUAGE the user is speaking.
-
-CUSTOM BUSINESS CONTEXT:
-${agentContextData.context}`;
+            const basePrompt = WEEBO_PROMPT;
+            
+            if (customerData && customerContext.contextText) {
+                // Customer found in DB — use Weebo prompt with their data
+                contextText = `${basePrompt}\n\n${customerContext.contextText}`;
+                console.log(`[PROMPT] Using Weebo prompt with customer data for ${from}`);
+            } else if (agentContextData) {
+                // No customer data found — use agent context from DB (fallback)
+                contextText = `${basePrompt}\n\nCUSTOMER DATA: No records found for this phone number.\n\nADDITIONAL CONTEXT:\n${agentContextData.context}`;
+                console.log(`[PROMPT] Using Weebo prompt without customer data for ${from}`);
             } else {
-                contextText = `You are ${vendor.company_name} WhatsApp assistant with document analysis capabilities. You can analyze PDFs, images, and audio files to help customers. Always respond in the same language as the customer.`;
+                // No customer data, no agent context — use base prompt only
+                contextText = `${basePrompt}\n\nCUSTOMER DATA: No records found for this phone number. Treat all fields as MISSING.`;
+                console.log(`[PROMPT] Using base Weebo prompt for ${from}`);
             }
 
             const agentRequest = {

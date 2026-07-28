@@ -463,6 +463,46 @@ async function saveAgentContext(vendorId, businessId, agentId, name, context, up
     }
 }
 
+// Lookup contact by phone number from uploaded data
+async function lookupContactByPhone(vendorId, phoneNumber) {
+    try {
+        // Normalize phone number: remove spaces, dashes, ensure it starts with country code
+        const normalize = (num) => {
+            if (!num) return '';
+            return num.toString().replace(/[\s\-()]/g, '').trim();
+        };
+
+        const normalizedInput = normalize(phoneNumber);
+
+        // Search across all valid contacts for this vendor
+        const contact = await ContactUpload.findOne({
+            vendor_id: vendorId,
+            status: 'valid',
+            $or: [
+                { 'fields.phone_number': phoneNumber },
+                { 'fields.phone_number': normalizedInput },
+                { 'fields.registered_mobile_number': phoneNumber },
+                { 'fields.registered_mobile_number': normalizedInput },
+                { 'fields.phone': phoneNumber },
+                { 'fields.phone': normalizedInput },
+                { 'fields.mobile': phoneNumber },
+                { 'fields.mobile': normalizedInput }
+            ]
+        }).sort({ createdAt: -1 }).lean();
+
+        if (contact) {
+            console.log(`[CONTACT_LOOKUP] Found contact for ${phoneNumber}: ${JSON.stringify(contact.fields)}`);
+            return contact.fields;
+        }
+
+        console.log(`[CONTACT_LOOKUP] No contact found for ${phoneNumber}`);
+        return null;
+    } catch (error) {
+        console.error('[CONTACT_LOOKUP] Error:', error);
+        return null;
+    }
+}
+
 // Generate unique vendor ID and business ID
 function generateVendorId() {
     return 'VND' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
@@ -492,6 +532,7 @@ module.exports = {
     getChatroomMessages,
     getAgentContext,
     saveAgentContext,
+    lookupContactByPhone,
     generateVendorId,
     generateBusinessId
 };
