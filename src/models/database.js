@@ -463,39 +463,55 @@ async function saveAgentContext(vendorId, businessId, agentId, name, context, up
     }
 }
 
+// Extract phone numbers from text
+function extractPhoneNumbers(text) {
+    if (!text) return [];
+    // Match Indian phone numbers: 10 digits, optional +91 or 91 prefix
+    const matches = text.match(/(?:\+?91)?[\s\-]?[6-9]\d{9}/g) || [];
+    return [...new Set(matches.map(m => m.replace(/[\s\-]/g, '').trim()))];
+}
+
 // Lookup contact by phone number from uploaded data
-async function lookupContactByPhone(vendorId, phoneNumber) {
+async function lookupContactByPhone(vendorId, phoneNumber, messageText) {
     try {
-        // Normalize phone number: remove spaces, dashes, ensure it starts with country code
         const normalize = (num) => {
             if (!num) return '';
             return num.toString().replace(/[\s\-()]/g, '').trim();
         };
 
         const normalizedInput = normalize(phoneNumber);
+        
+        // Build list of numbers to search: sender + any numbers in message
+        const numbersToSearch = [phoneNumber, normalizedInput];
+        if (messageText) {
+            const extracted = extractPhoneNumbers(messageText);
+            extracted.forEach(n => numbersToSearch.push(n));
+        }
+
+        console.log(`[CONTACT_LOOKUP] Searching for numbers: ${[...new Set(numbersToSearch)].join(', ')}`);
 
         // Search across all valid contacts for this vendor
+        const orConditions = [];
+        const fieldNames = ['phone_number', 'registered_mobile_number', 'phone', 'mobile', 'whatsapp_number', 'number'];
+        
+        for (const num of numbersToSearch) {
+            for (const field of fieldNames) {
+                orConditions.push({ [`fields.${field}`]: num });
+            }
+        }
+
         const contact = await ContactUpload.findOne({
             vendor_id: vendorId,
             status: 'valid',
-            $or: [
-                { 'fields.phone_number': phoneNumber },
-                { 'fields.phone_number': normalizedInput },
-                { 'fields.registered_mobile_number': phoneNumber },
-                { 'fields.registered_mobile_number': normalizedInput },
-                { 'fields.phone': phoneNumber },
-                { 'fields.phone': normalizedInput },
-                { 'fields.mobile': phoneNumber },
-                { 'fields.mobile': normalizedInput }
-            ]
+            $or: orConditions
         }).sort({ createdAt: -1 }).lean();
 
         if (contact) {
-            console.log(`[CONTACT_LOOKUP] Found contact for ${phoneNumber}: ${JSON.stringify(contact.fields)}`);
+            console.log(`[CONTACT_LOOKUP] ✅ Found contact: ${JSON.stringify(contact.fields)}`);
             return contact.fields;
         }
 
-        console.log(`[CONTACT_LOOKUP] No contact found for ${phoneNumber}`);
+        console.log(`[CONTACT_LOOKUP] ❌ No contact found for any of these numbers`);
         return null;
     } catch (error) {
         console.error('[CONTACT_LOOKUP] Error:', error);
@@ -533,6 +549,7 @@ module.exports = {
     getAgentContext,
     saveAgentContext,
     lookupContactByPhone,
+    extractPhoneNumbers,
     generateVendorId,
     generateBusinessId
 };

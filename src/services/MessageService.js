@@ -115,7 +115,7 @@ class MessageService {
             const agentContextData = await getAgentContext(vendor.vendor_id, businessId, agentId);
             
             // 🔥 LOOKUP CUSTOMER DATA FROM UPLOADED CONTACTS
-            const customerData = await lookupContactByPhone(vendor.vendor_id, from);
+            const customerData = await lookupContactByPhone(vendor.vendor_id, from, messageText);
             const customerContext = buildCustomerContext(customerData, from);
             
             console.log(`[CONTACT_LOOKUP] Phone: ${from}, Found: ${!!customerData}, Verified: ${customerContext.identityVerified}`);
