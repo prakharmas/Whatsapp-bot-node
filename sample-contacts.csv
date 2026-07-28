@@ -1,0 +1,7 @@
+plan_name,email,phone_number,city,notes
+Gold Plan,john@example.com,+1234567890,New York,Premium customer
+Silver Plan,jane@test.com,+0987654321,London,Referred by John
+Basic Plan,bob@example.com,+1122334455,Tokyo,
+Platinum Plan,,+5566778899,Paris,No email provided
+Gold Plan,charlie@test.com,,Berlin,No phone provided
+Invalid Row,,,,

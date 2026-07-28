@@ -15,6 +15,7 @@ const { setupGlobalMiddleware } = require('./src/middleware/global');
 const authRoutes = require('./src/routes/auth');
 const webhookRoutes = require('./src/routes/webhook');
 const vendorRoutes = require('./src/routes/vendor');
+const uploadRoutes = require('./src/routes/upload');
 
 // Import controllers
 const AdminController = require('./src/controllers/AdminController');
@@ -88,6 +89,7 @@ if (!fs.existsSync(publicDir)) {
 app.use('/', authRoutes);
 app.use('/webhook', webhookRoutes);
 app.use('/', vendorRoutes);
+app.use('/', uploadRoutes);
 
 // Admin routes (keeping existing structure for now)
 app.get('/admin', requireAdmin, AdminController.dashboard);

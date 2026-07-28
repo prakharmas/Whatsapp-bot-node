@@ -1,0 +1,164 @@
+<%- include('partials/layout-header', { title: 'Upload Details', currentPage: 'upload' }) %>
+
+<div class="content-header">
+    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <a href="/upload" style="color: var(--text-muted); text-decoration: none; font-size: 1.2rem;">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <h1><i class="fas fa-file-alt"></i> <%= batch.original_name %></h1>
+            <p>Upload batch details and contacts</p>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Summary -->
+<div class="card-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-database" style="color: var(--primary-color);"></i> Total Rows</h3>
+        </div>
+        <div class="card-content">
+            <div class="stat-number"><%= batch.total_rows %></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-check-circle" style="color: var(--success-color);"></i> Successful</h3>
+        </div>
+        <div class="card-content">
+            <div class="stat-number"><%= batch.success_rows %></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-exclamation-circle" style="color: var(--error-color);"></i> Errors</h3>
+        </div>
+        <div class="card-content">
+            <div class="stat-number"><%= batch.error_rows %></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-info-circle" style="color: var(--accent-color);"></i> Status</h3>
+        </div>
+        <div class="card-content">
+            <% if (batch.status === 'completed') { %>
+                <span style="padding: 0.3rem 0.8rem; background: #d1fae5; color: #065f46; border-radius: 20px; font-weight: 500;">
+                    <i class="fas fa-check"></i> Completed
+                </span>
+            <% } else if (batch.status === 'failed') { %>
+                <span style="padding: 0.3rem 0.8rem; background: #fee2e2; color: #991b1b; border-radius: 20px; font-weight: 500;">
+                    <i class="fas fa-times"></i> Failed
+                </span>
+            <% } else { %>
+                <span style="padding: 0.3rem 0.8rem; background: #fef3c7; color: #92400e; border-radius: 20px; font-weight: 500;">
+                    <i class="fas fa-spinner fa-spin"></i> Processing
+                </span>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<!-- Error Details -->
+<% if (batch.errors && batch.errors.length > 0) { %>
+<div class="card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h3><i class="fas fa-exclamation-triangle" style="color: var(--error-color);"></i> Error Details</h3>
+    </div>
+    <div class="card-content">
+        <div style="overflow-x: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Row</th>
+                        <th>Error Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% batch.errors.forEach(err => { %>
+                        <tr>
+                            <td><%= err.row %></td>
+                            <td style="color: var(--error-color);"><%= err.message %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<!-- Contacts Table -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h3><i class="fas fa-users"></i> Contacts (<%= pagination.total %>)</h3>
+    </div>
+    <div class="card-content">
+        <% if (contacts.length === 0) { %>
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <i class="fas fa-user-slash" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                <h3>No contacts found</h3>
+            </div>
+        <% } else { %>
+            <div style="overflow-x: auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Row</th>
+                            <% (batch.columns || []).forEach(col => { %>
+                                <th><%= col %></th>
+                            <% }); %>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% contacts.forEach(contact => { %>
+                            <tr>
+                                <td><%= contact.row_number %></td>
+                                <% (batch.columns || []).forEach(col => { %>
+                                    <td><%= (contact.fields && contact.fields[col] != null) ? contact.fields[col] : '-' %></td>
+                                <% }); %>
+                                <td>
+                                    <% if (contact.status === 'valid') { %>
+                                        <span style="padding: 0.15rem 0.5rem; background: #d1fae5; color: #065f46; border-radius: 20px; font-size: 0.8rem;">
+                                            <i class="fas fa-check"></i> Valid
+                                        </span>
+                                    <% } else { %>
+                                        <span style="padding: 0.15rem 0.5rem; background: #fee2e2; color: #991b1b; border-radius: 20px; font-size: 0.8rem;" title="<%= contact.validation_errors.join(', ') %>">
+                                            <i class="fas fa-times"></i> Invalid
+                                        </span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <% if (pagination.totalPages > 1) { %>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <% if (pagination.page > 1) { %>
+                    <a href="?page=<%= pagination.page - 1 %>" style="padding: 0.4rem 0.8rem; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 6px; text-decoration: none; color: var(--text-primary); font-size: 0.9rem;">
+                        <i class="fas fa-chevron-left"></i> Prev
+                    </a>
+                <% } %>
+                <span style="color: var(--text-muted); font-size: 0.9rem;">
+                    Page <%= pagination.page %> of <%= pagination.totalPages %>
+                </span>
+                <% if (pagination.page < pagination.totalPages) { %>
+                    <a href="?page=<%= pagination.page + 1 %>" style="padding: 0.4rem 0.8rem; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 6px; text-decoration: none; color: var(--text-primary); font-size: 0.9rem;">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                <% } %>
+            </div>
+            <% } %>
+        <% } %>
+    </div>
+</div>
+
+<%- include('partials/layout-footer') %>

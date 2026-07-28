@@ -20,8 +20,10 @@
     "form-data": "^4.0.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.0.0",
+    "multer": "^2.2.0",
     "openai": "^6.15.0",
-    "pdf-parse": "^1.1.4"
+    "pdf-parse": "^1.1.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

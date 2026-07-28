@@ -1,0 +1,234 @@
+<%- include('partials/layout-header', { title: 'Upload Contacts', currentPage: 'upload' }) %>
+
+<div class="content-header">
+    <h1><i class="fas fa-cloud-upload-alt"></i> Upload Contacts</h1>
+    <p>Upload CSV or Excel files with your contact data</p>
+</div>
+
+<% if (success) { %>
+    <div style="padding: 1rem 1.5rem; border-radius: 8px; background: #d1fae5; color: #065f46; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fas fa-check-circle"></i>
+        <span><%= success %></span>
+        <button onclick="this.parentElement.remove()" style="margin-left: auto; background: none; border: none; color: inherit; cursor: pointer; font-size: 1.1rem;">&times;</button>
+    </div>
+<% } %>
+
+<% if (error) { %>
+    <div style="padding: 1rem 1.5rem; border-radius: 8px; background: #fee2e2; color: #991b1b; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fas fa-exclamation-circle"></i>
+        <span><%= error %></span>
+        <button onclick="this.parentElement.remove()" style="margin-left: auto; background: none; border: none; color: inherit; cursor: pointer; font-size: 1.1rem;">&times;</button>
+    </div>
+<% } %>
+
+<!-- Upload Card -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-file-upload"></i> Upload File</h3>
+    </div>
+    <div class="card-content">
+        <form action="/upload" method="POST" enctype="multipart/form-data" id="uploadForm">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Select File (CSV or Excel)</label>
+                <div id="dropZone" style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s ease; background: var(--surface-color);">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
+                    <p style="margin: 0 0 0.5rem; color: var(--text-primary); font-weight: 500;">Drag & drop your file here</p>
+                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">or click to browse</p>
+                    <p style="margin: 0.75rem 0 0; color: var(--text-muted); font-size: 0.8rem;">Supported: .csv, .xlsx, .xls (Max 10MB)</p>
+                    <input type="file" name="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;" required>
+                </div>
+                <div id="fileInfo" style="display: none; margin-top: 0.75rem; padding: 0.75rem 1rem; background: var(--background-color); border-radius: 6px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-file" style="color: var(--primary-color); font-size: 1.5rem;"></i>
+                        <div>
+                            <div id="fileName" style="font-weight: 500; color: var(--text-primary);"></div>
+                            <div id="fileSize" style="font-size: 0.85rem; color: var(--text-muted);"></div>
+                        </div>
+                        <button type="button" id="removeFile" style="margin-left: auto; background: none; border: none; color: var(--error-color); cursor: pointer; font-size: 1.1rem;">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 1rem; background: var(--background-color); border-radius: 8px; margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 0.75rem; color: var(--text-primary); font-size: 0.95rem;"><i class="fas fa-info-circle"></i> Dynamic Fields</h4>
+                <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">All columns from your CSV or Excel file are detected and stored as-is. Any column name works - no hardcoded fields.</p>
+            </div>
+
+            <button type="submit" id="uploadBtn" class="btn btn-primary" disabled style="width: 100%;">
+                <i class="fas fa-upload"></i> Upload & Process
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Upload History -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h3><i class="fas fa-history"></i> Upload History</h3>
+    </div>
+    <div class="card-content">
+        <% if (batches.length === 0) { %>
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                <h3 style="margin-bottom: 0.5rem;">No uploads yet</h3>
+                <p>Upload your first CSV or Excel file to get started.</p>
+            </div>
+        <% } else { %>
+            <div style="overflow-x: auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>Columns</th>
+                            <th>Total</th>
+                            <th>Success</th>
+                            <th>Errors</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% batches.forEach(batch => { %>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <% if (batch.file_type === 'csv') { %>
+                                            <i class="fas fa-file-csv" style="color: #059669; font-size: 1.2rem;"></i>
+                                        <% } else { %>
+                                            <i class="fas fa-file-excel" style="color: #2563eb; font-size: 1.2rem;"></i>
+                                        <% } %>
+                                        <span><%= batch.original_name %></span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; max-width: 250px;">
+                                        <% (batch.columns || []).slice(0, 4).forEach(col => { %>
+                                            <span style="padding: 0.1rem 0.4rem; background: var(--primary-color); color: white; border-radius: 3px; font-size: 0.7rem; white-space: nowrap;"><%= col %></span>
+                                        <% }); %>
+                                        <% if ((batch.columns || []).length > 4) { %>
+                                            <span style="padding: 0.1rem 0.4rem; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 3px; font-size: 0.7rem;">+<%= batch.columns.length - 4 %></span>
+                                        <% } %>
+                                    </div>
+                                </td>
+                                <td><%= batch.total_rows %></td>
+                                <td style="color: var(--success-color); font-weight: 500;"><%= batch.success_rows %></td>
+                                <td style="color: <%= batch.error_rows > 0 ? 'var(--error-color)' : 'var(--text-muted)' %>; font-weight: <%= batch.error_rows > 0 ? '500' : '400' %>;"><%= batch.error_rows %></td>
+                                <td>
+                                    <% if (batch.status === 'completed') { %>
+                                        <span style="padding: 0.2rem 0.6rem; background: #d1fae5; color: #065f46; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">
+                                            <i class="fas fa-check"></i> Completed
+                                        </span>
+                                    <% } else if (batch.status === 'failed') { %>
+                                        <span style="padding: 0.2rem 0.6rem; background: #fee2e2; color: #991b1b; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">
+                                            <i class="fas fa-times"></i> Failed
+                                        </span>
+                                    <% } else { %>
+                                        <span style="padding: 0.2rem 0.6rem; background: #fef3c7; color: #92400e; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">
+                                            <i class="fas fa-spinner fa-spin"></i> Processing
+                                        </span>
+                                    <% } %>
+                                </td>
+                                <td><%= new Date(batch.createdAt).toLocaleDateString() %></td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <a href="/upload/batch/<%= batch._id %>" style="padding: 0.3rem 0.6rem; background: var(--primary-color); color: white; border-radius: 4px; text-decoration: none; font-size: 0.8rem;" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <form action="/upload/batch/<%= batch._id %>/delete" method="POST" style="display: inline;" onsubmit="return confirm('Delete this upload batch and all its contacts?')">
+                                            <button type="submit" style="padding: 0.3rem 0.6rem; background: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<style>
+    #dropZone.dragover {
+        border-color: var(--primary-color);
+        background: var(--primary-color-light, rgba(99, 102, 241, 0.05));
+    }
+    #dropZone:hover {
+        border-color: var(--primary-color);
+    }
+</style>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const removeFile = document.getElementById('removeFile');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            handleFile(fileInput.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['csv', 'xlsx', 'xls'].includes(ext)) {
+            alert('Only CSV and Excel files are allowed');
+            fileInput.value = '';
+            return;
+        }
+        fileName.textContent = file.name;
+        fileSize.textContent = formatSize(file.size);
+        fileInfo.style.display = 'block';
+        dropZone.style.display = 'none';
+        uploadBtn.disabled = false;
+    }
+
+    removeFile.addEventListener('click', () => {
+        fileInput.value = '';
+        fileInfo.style.display = 'none';
+        dropZone.style.display = 'block';
+        uploadBtn.disabled = true;
+    });
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', function() {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    });
+</script>
+
+<%- include('partials/layout-footer') %>

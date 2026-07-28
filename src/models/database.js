@@ -251,7 +251,39 @@ const walletTransactionSchema = new mongoose.Schema({
 
 
 
+// Upload Batch Schema (tracks each file upload)
+const uploadBatchSchema = new mongoose.Schema({
+    vendor_id: { type: String, required: true },
+    filename: { type: String, required: true },
+    original_name: { type: String, required: true },
+    file_type: { type: String, enum: ['csv', 'xlsx', 'xls'], required: true },
+    columns: [{ type: String }],
+    total_rows: { type: Number, default: 0 },
+    success_rows: { type: Number, default: 0 },
+    error_rows: { type: Number, default: 0 },
+    errors: [{ row: Number, message: String }],
+    status: { type: String, enum: ['processing', 'completed', 'failed'], default: 'processing' }
+}, {
+    timestamps: true
+});
+
+// Contact Upload Schema (individual contacts from uploaded files)
+const contactUploadSchema = new mongoose.Schema({
+    vendor_id: { type: String, required: true },
+    batch_id: { type: mongoose.Schema.Types.ObjectId, ref: 'UploadBatch', required: true },
+    row_number: { type: Number },
+    fields: { type: mongoose.Schema.Types.Mixed },
+    status: { type: String, enum: ['valid', 'invalid', 'duplicate'], default: 'valid' },
+    validation_errors: [{ type: String }]
+}, {
+    timestamps: true
+});
+
+contactUploadSchema.index({ vendor_id: 1, batch_id: 1 });
+
 const Vendor = mongoose.model('Vendor', vendorSchema);
+const UploadBatch = mongoose.model('UploadBatch', uploadBatchSchema);
+const ContactUpload = mongoose.model('ContactUpload', contactUploadSchema);
 const Chatroom = mongoose.model('Chatroom', chatroomSchema);
 const Message = mongoose.model('Message', messageSchema);
 const AgentContext = mongoose.model('AgentContext', agentContextSchema);
@@ -444,6 +476,8 @@ function generateBusinessId() {
 module.exports = {
     connectDB,
     Vendor,
+    UploadBatch,
+    ContactUpload,
     Chatroom,
     Message,
     AgentContext,
