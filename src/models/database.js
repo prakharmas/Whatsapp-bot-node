@@ -466,9 +466,21 @@ async function saveAgentContext(vendorId, businessId, agentId, name, context, up
 // Extract phone numbers from text
 function extractPhoneNumbers(text) {
     if (!text) return [];
-    // Match Indian phone numbers: 10 digits, optional +91 or 91 prefix
     const matches = text.match(/(?:\+?91)?[\s\-]?[6-9]\d{9}/g) || [];
     return [...new Set(matches.map(m => m.replace(/[\s\-]/g, '').trim()))];
+}
+
+// Convert scientific notation or Excel-formatted phone numbers
+function fixPhoneNumber(num) {
+    if (!num) return '';
+    let str = String(num).trim();
+    // Handle scientific notation like 9.17828E+11
+    if (str.includes('E+') || str.includes('e+')) {
+        str = Math.round(parseFloat(str)).toString();
+    }
+    // Remove spaces, dashes, dots, parentheses
+    str = str.replace(/[\s\-.\(\)]/g, '');
+    return str;
 }
 
 // Lookup contact by phone number from uploaded data
@@ -480,23 +492,40 @@ async function lookupContactByPhone(vendorId, phoneNumber, messageText) {
         };
 
         const normalizedInput = normalize(phoneNumber);
+        const fixedInput = fixPhoneNumber(phoneNumber);
         
         // Build list of numbers to search: sender + any numbers in message
-        const numbersToSearch = [phoneNumber, normalizedInput];
+        const numbersToSearch = [phoneNumber, normalizedInput, fixedInput];
         if (messageText) {
             const extracted = extractPhoneNumbers(messageText);
-            extracted.forEach(n => numbersToSearch.push(n));
+            extracted.forEach(n => {
+                numbersToSearch.push(n);
+                numbersToSearch.push(fixPhoneNumber(n));
+            });
         }
 
-        console.log(`[CONTACT_LOOKUP] Searching for numbers: ${[...new Set(numbersToSearch)].join(', ')}`);
+        const uniqueNumbers = [...new Set(numbersToSearch)].filter(n => n && n.length >= 10);
+        console.log(`[CONTACT_LOOKUP] Searching for numbers: ${uniqueNumbers.join(', ')}`);
 
         // Search across all valid contacts for this vendor
         const orConditions = [];
         const fieldNames = ['phone_number', 'registered_mobile_number', 'phone', 'mobile', 'whatsapp_number', 'number'];
         
-        for (const num of numbersToSearch) {
+        for (const num of uniqueNumbers) {
             for (const field of fieldNames) {
                 orConditions.push({ [`fields.${field}`]: num });
+            }
+        }
+
+        // Also search using $regex and $expr to handle numbers stored as integers
+        for (const num of uniqueNumbers) {
+            if (num.length >= 10) {
+                const last10 = num.slice(-10);
+                for (const field of fieldNames) {
+                    orConditions.push({ [`fields.${field}`]: { $regex: last10 + '$' } });
+                    // Also match numeric fields (stored as Number in MongoDB)
+                    orConditions.push({ [`fields.${field}`]: parseInt(num) });
+                }
             }
         }
 
@@ -507,11 +536,18 @@ async function lookupContactByPhone(vendorId, phoneNumber, messageText) {
         }).sort({ createdAt: -1 }).lean();
 
         if (contact) {
-            console.log(`[CONTACT_LOOKUP] ✅ Found contact: ${JSON.stringify(contact.fields)}`);
-            return contact.fields;
+            // Fix any scientific notation in the returned data
+            const fixed = { ...contact.fields };
+            for (const key of Object.keys(fixed)) {
+                fixed[key] = fixPhoneNumber(fixed[key]);
+            }
+            console.log(`[CONTACT_LOOKUP] ✅ Found contact: ${JSON.stringify(fixed)}`);
+            return fixed;
         }
 
-        console.log(`[CONTACT_LOOKUP] ❌ No contact found for any of these numbers`);
+        // Debug: check if any contacts exist for this vendor at all
+        const totalCount = await ContactUpload.countDocuments({ vendor_id: vendorId, status: 'valid' });
+        console.log(`[CONTACT_LOOKUP] ❌ No contact found. Total valid contacts for this vendor: ${totalCount}`);
         return null;
     } catch (error) {
         console.error('[CONTACT_LOOKUP] Error:', error);
