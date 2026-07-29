@@ -11,6 +11,7 @@ const { autoTagFromIntent } = require('./ai/TaggingService');
 const WhatsAppService = require('./WhatsAppService');
 const BillingEngine = require('./billing/BillingEngine');
 const tokenOptimizer = require('../utils/tokenOptimizer');
+const knowledgeService = require('./KnowledgeService');
 
 class MessageService {
     constructor() {
@@ -171,6 +172,14 @@ class MessageService {
                 // No customer data, no agent context — use base prompt only
                 contextText = `${basePrompt}\n\nCUSTOMER DATA: No records found for this phone number. Treat all fields as MISSING.`;
                 console.log(`[PROMPT] Using base Weebo prompt for ${from}`);
+            }
+
+            // 🔥 KNOWLEDGE BASE: Inject relevant FAQ & Plan data
+            const knowledgeContext = await knowledgeService.buildKnowledgeContext(vendor.vendor_id, messageText);
+            if (knowledgeContext) {
+                contextText += `\n\n--- KNOWLEDGE BASE ---\n${knowledgeContext}`;
+                contextText += `\n\nIMPORTANT: Use the FAQs above to answer the customer's question accurately. For plan/pricing queries, use the plan data provided above. If the answer is not in the knowledge base, follow the normal flow.`;
+                console.log(`[KNOWLEDGE] Injected ${knowledgeContext.length} chars of context for ${from}`);
             }
 
             const agentRequest = {

@@ -565,6 +565,8 @@ function generateBusinessId() {
     return parseInt(Date.now().toString().slice(-8)); // Last 8 digits of timestamp
 }
 
+const { FAQ, Plan } = require('./FAQModel');
+
 module.exports = {
     connectDB,
     Vendor,
@@ -579,6 +581,8 @@ module.exports = {
     UsageRecord,
     ExchangeRate,
     WalletTransaction,
+    FAQ,
+    Plan,
     createOrGetChatroom,
     saveMessage,
     getChatroomMessages,
