@@ -189,8 +189,8 @@ class KnowledgeService {
         for (const [period, planList] of Object.entries(groups)) {
             summary += `\n--- ${period} PLANS ---\n`;
             for (const p of planList) {
-                const ott = p.ott_apps && p.ott_apps.length > 0 ? ` (with OTT: ${p.ott_apps.slice(0, 3).join(', ')}${p.ott_apps.length > 3 ? '...' : ''})` : ' (no OTT)';
-                summary += `${p.speed} - ₹${p.price}${ott}\n`;
+                const ott = p.ott_apps && p.ott_apps.length > 0 ? ` (with OTT: ${p.ott_apps.slice(0, 3).join(', ')}${p.ott_apps.length > 3 ? '...' : ''})` : '';
+                summary += `${p.speed} - Rs.${p.price}${ott}\n`;
             }
         }
 
@@ -216,11 +216,10 @@ class KnowledgeService {
         if (plans.length > 0) {
             context += '\n\n## AVAILABLE PLANS (reference for pricing/plan queries):\n';
             for (const p of plans) {
-                const ottInfo = p.ott_detail || (p.ott_apps && p.ott_apps.length > 0 ? p.ott_apps.join(', ') : '');
-                context += `\n- ${p.name || p.speed}: ₹${p.price} for ${p.validity_label || p.validity_days + ' days'} | Speed: ${p.speed}`;
-                if (ottInfo) context += ` | OTT: ${ottInfo}`;
-                if (p.live_channels) context += ` | Live TV: ${p.live_channels}`;
-                context += ` | Plan code: ${p.plan_code || 'N/A'}`;
+                const ottInfo = p.ott_apps && p.ott_apps.length > 0 ? p.ott_apps.slice(0, 5).join(', ') : '';
+                const label = p.validity_label || (p.validity_days >= 365 ? '1 Year' : p.validity_days >= 180 ? '6 Months' : p.validity_days >= 90 ? '3 Months' : p.validity_days >= 60 ? '2 Months' : '1 Month');
+                context += `\n- ${p.speed}: ₹${p.price} for ${label}`;
+                if (ottInfo) context += ` (includes ${ottInfo})`;
             }
         }
 
