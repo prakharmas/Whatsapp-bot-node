@@ -256,14 +256,14 @@ async function seed() {
         {
             vendor_id: VENDOR_ID, category: 'plans_subscription', category_label: 'Plans & Subscription',
             question: 'Plan upgrade karna hai. / Want to upgrade my plan.',
-            answer: 'Hum upgrade request raise karenge. Team available upgrade options with pricing share karegi aur aapki preference ke hisaab se change process karegi. Aapke usage ke hisaab se suitable speed aur plan duration suggest kiya jayega.',
+            answer: 'Check the AVAILABLE PLANS section below for current pricing and options. Ask the customer about their preferred tenure (1/3/6/12 months) and whether they want OTT. Then suggest matching plans from the list below.',
             keywords: ['upgrade', 'plan upgrade', 'better plan', 'change plan'],
             tags: ['plans', 'upgrade'], sort_order: 31
         },
         {
             vendor_id: VENDOR_ID, category: 'plans_subscription', category_label: 'Plans & Subscription',
             question: 'Current available plans kya hain? / What are the current available plans?',
-            answer: 'Hum request raise karenge aur team latest plan details (speed, validity, pricing) share karegi. Aapke current plan ko check karke suitable plan suggest kiya jayega. Agar current plan 1 month ka hai to 3 month plan suggest kiya jayega.',
+            answer: 'Use the AVAILABLE PLANS section below to show the customer relevant plans. Present options by speed, price, and OTT availability. For example: "Sir, 3 mahine ke plans: 100Mbps ₹1500, 125Mbps ₹2000, 225Mbps ₹1800 OTT ke saath." Ask their preference and proceed.',
             keywords: ['available plans', 'plan list', 'plan details', 'all plans', 'kya plans hain'],
             tags: ['plans', 'information'], sort_order: 32
         },
