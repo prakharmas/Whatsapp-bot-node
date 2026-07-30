@@ -467,7 +467,7 @@ async function saveAgentContext(vendorId, businessId, agentId, name, context, up
 function extractPhoneNumbers(text) {
     if (!text) return [];
     const matches = text.match(/(?:\+?91)?[\s\-]?[6-9]\d{9}/g) || [];
-    return [...new Set(matches.map(m => m.replace(/[\s\-]/g, '').trim()))];
+    return [...new Set(matches.map(m => m.replace(/[\s\-\+]/g, '').trim()))];
 }
 
 // Convert scientific notation or Excel-formatted phone numbers
@@ -478,8 +478,8 @@ function fixPhoneNumber(num) {
     if (str.includes('E+') || str.includes('e+')) {
         str = Math.round(parseFloat(str)).toString();
     }
-    // Remove spaces, dashes, dots, parentheses
-    str = str.replace(/[\s\-.\(\)]/g, '');
+    // Remove spaces, dashes, dots, parentheses, plus signs
+    str = str.replace(/[\s\-.\(\)\+]/g, '');
     return str;
 }
 
@@ -488,7 +488,7 @@ async function lookupContactByPhone(vendorId, phoneNumber, messageText) {
     try {
         const normalize = (num) => {
             if (!num) return '';
-            return num.toString().replace(/[\s\-()]/g, '').trim();
+            return num.toString().replace(/[\s\-()\+]/g, '').trim();
         };
 
         const normalizedInput = normalize(phoneNumber);
@@ -522,9 +522,25 @@ async function lookupContactByPhone(vendorId, phoneNumber, messageText) {
             if (num.length >= 10) {
                 const last10 = num.slice(-10);
                 for (const field of fieldNames) {
+                    // Match last 10 digits (works for string fields with or without prefix)
                     orConditions.push({ [`fields.${field}`]: { $regex: last10 + '$' } });
-                    // Also match numeric fields (stored as Number in MongoDB)
+                    // Match as exact number
                     orConditions.push({ [`fields.${field}`]: parseInt(num) });
+                    // Try last 10 digits as standalone number (for DB without prefix)
+                    orConditions.push({ [`fields.${field}`]: parseInt(last10) });
+                    
+                    // If user typed 10 digits, also try with 91 prefix (DB might have it)
+                    if (num.length === 10) {
+                        const with91 = '91' + num;
+                        orConditions.push({ [`fields.${field}`]: with91 });
+                        orConditions.push({ [`fields.${field}`]: parseInt(with91) });
+                    }
+                    
+                    // If user typed 12-digit (91 prefix), also try without prefix
+                    if (num.length > 10 && num.startsWith('91')) {
+                        orConditions.push({ [`fields.${field}`]: last10 });
+                        orConditions.push({ [`fields.${field}`]: parseInt(last10) });
+                    }
                 }
             }
         }

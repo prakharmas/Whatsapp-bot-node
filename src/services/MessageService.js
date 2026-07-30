@@ -163,6 +163,25 @@ class MessageService {
             if (customerData && customerContext.contextText) {
                 // Customer found in DB — use Weebo prompt with their data
                 contextText = `${basePrompt}\n\n${customerContext.contextText}`;
+                
+                // If identity is verified (WhatsApp number matches registered mobile), skip greeting step
+                if (customerContext.identityVerified) {
+                    const name = customerContext.customerData?.name || '';
+                    const salutation = customerContext.customerData?.gender || 'Sir';
+                    contextText += `\n\n### IDENTITY ALREADY VERIFIED — OVERRIDE STEP 1\n`;
+                    contextText += `The customer's WhatsApp number matches their registered mobile number. Identity is already confirmed.\n`;
+                    contextText += `DO NOT ask for name or mobile number. Skip STEP 1 — GREETING & IDENTITY entirely.\n`;
+                    if (name) {
+                        contextText += `Instead, directly greet them by name:\n`;
+                        contextText += `HINGLISH: "Namaste! Weebo Broadband mein aapka swagat hai ${name} ${salutation}! Main Priya hoon. Batayein, main aapki kis tarah madad kar sakti hoon?"\n`;
+                        contextText += `ENGLISH: "Hello ${name}! Welcome to Weebo Broadband, this is Priya. How can I help you today?"`;
+                    } else {
+                        contextText += `Instead, directly greet them:\n`;
+                        contextText += `HINGLISH: "Namaste! Weebo Broadband mein aapka swagat hai! Main Priya hoon. Batayein, main aapki kis tarah madad kar sakti hoon?"\n`;
+                        contextText += `ENGLISH: "Hello! Welcome to Weebo Broadband, this is Priya. How can I help you today?"`;
+                    }
+                }
+                
                 console.log(`[PROMPT] Using Weebo prompt with customer data for ${from}`);
             } else if (agentContextData) {
                 // No customer data found — use agent context from DB (fallback)
