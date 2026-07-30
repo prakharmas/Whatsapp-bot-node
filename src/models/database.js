@@ -552,10 +552,12 @@ async function lookupContactByPhone(vendorId, phoneNumber, messageText) {
         }).sort({ createdAt: -1 }).lean();
 
         if (contact) {
-            // Fix any scientific notation in the returned data
+            // Only fix phone number fields (not names or other text)
             const fixed = { ...contact.fields };
             for (const key of Object.keys(fixed)) {
-                fixed[key] = fixPhoneNumber(fixed[key]);
+                if (fieldNames.includes(key)) {
+                    fixed[key] = fixPhoneNumber(fixed[key]);
+                }
             }
             console.log(`[CONTACT_LOOKUP] ✅ Found contact: ${JSON.stringify(fixed)}`);
             return fixed;

@@ -264,7 +264,8 @@ function buildCustomerContext(customerData, senderPhone) {
     }
 
     const name = customerData.customer_name || customerData.name || '';
-    const registeredMobile = customerData.registered_mobile_number || customerData.phone_number || customerData.phone || customerData.mobile || '';
+    const registeredMobileRaw = customerData.registered_mobile_number || customerData.phone_number || customerData.phone || customerData.mobile || '';
+    const registeredMobile = String(registeredMobileRaw).replace(/[\s\-.()\+]/g, '');
     const planName = customerData.current_plan_name || customerData.plan_name || '';
     const planFee = customerData.current_plan_fee || customerData.plan_fee || customerData.fee || '';
     const planExpiry = customerData.plan_expiry_date || customerData.plan_expiry || customerData.expiry_date || '';
