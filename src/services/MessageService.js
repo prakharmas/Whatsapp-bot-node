@@ -132,6 +132,21 @@ class MessageService {
             );
             console.log(`[TOKEN_OPTIMIZER] History uses ~${estimatedTokens} tokens`);
             
+            // 🔥 SANITIZE HISTORY: When identity verified, fix old wrong greeting messages in history
+            if (customerContext.identityVerified) {
+                const histName = customerContext.customerData?.name || '';
+                for (let i = 0; i < conversationHistory.length; i++) {
+                    if (conversationHistory[i].role === 'assistant' && 
+                        conversationHistory[i].content.includes('May I know your name and registered mobile number')) {
+                        const newGreeting = histName 
+                            ? `Hello ${histName}! Welcome to Weebo Broadband, this is Priya. How can I help you today?`
+                            : `Hello! Welcome to Weebo Broadband, this is Priya. How can I help you today?`;
+                        conversationHistory[i].content = newGreeting;
+                        console.log(`[HISTORY] Fixed old greeting in history message ${i} for ${from}`);
+                    }
+                }
+            }
+            
             // 🔥 FIX: Include media analysis in current message
             let enhancedMessage = messageText;
             if (userMessage.media_analysis && userMessage.media_analysis.analysis_summary) {
@@ -191,6 +206,19 @@ class MessageService {
                 contextText += `\n\n--- KNOWLEDGE BASE ---\n${knowledgeContext}`;
                 contextText += `\n\nIMPORTANT: Use the FAQs above to answer the customer's question accurately. For plan/pricing queries, use the plan data provided above. If the answer is not in the knowledge base, follow the normal flow.`;
                 console.log(`[KNOWLEDGE] Injected ${knowledgeContext.length} chars of context for ${from}`);
+            }
+
+            // 🔥 FINAL OVERRIDE: When identity is verified, break the historical pattern
+            // (placed at end for recency bias — GPT follows latest instructions most strongly)
+            if (customerContext.identityVerified) {
+                const overrideName = customerContext.customerData?.name || '';
+                contextText += `\n\n### ⚠️ FINAL OVERRIDE — READ CAREFULLY\n`;
+                contextText += `The customer's identity (${overrideName}) is ALREADY verified and confirmed.\n`;
+                contextText += `DO NOT ask for their name or registered mobile number under ANY circumstances.\n`;
+                contextText += `DO NOT use the old greeting "May I know your name and registered mobile number?" — that is now WRONG.\n`;
+                contextText += `Ignore any previous messages in the history where the assistant asked for name/number — those were mistakes.\n`;
+                contextText += `This customer is ${overrideName} and their identity is confirmed. Start fresh.\n`;
+                console.log(`[PROMPT] Added final override for verified identity of ${from}`);
             }
 
             const agentRequest = {
