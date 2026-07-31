@@ -87,7 +87,7 @@ class MessageService {
         await WhatsAppService.markMessageAsRead(message.id, vendor.vendor_id);
 
         // 🔥 COMPLAINT INTEGRATION: Detect complaint, collect details, register via CRM API
-        const { ComplaintService } = require('./ComplaintService');
+        const ComplaintService = require('./ComplaintService');
         const complaintHandled = await ComplaintService.handleMessage(vendor, from, messageText);
         if (complaintHandled) {
             console.log(`[COMPLAINT] Message handled by complaint flow for ${from}`);
