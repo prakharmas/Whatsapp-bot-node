@@ -15,7 +15,6 @@ const FIELD_DEFINITIONS = [
 ];
 
 const CANCEL_PATTERN = /^(cancel|cancel karo|cancel kar do)$/i;
-const RETRY_PATTERN = /^r$/i;
 const COMPLAINT_PATTERN = /\bcomplai[a-z]*\b|\bshikayat\b|\bshikayt\b/i;
 
 class ComplaintService {
@@ -45,15 +44,6 @@ class ComplaintService {
             } else {
                 await this.processField(session, messageText);
             }
-        } else if (session.status === 'ready') {
-            handled = true;
-            if (isCancel) {
-                await this.cancelSession(session);
-            } else if (RETRY_PATTERN.test(messageText.trim())) {
-                await this.submitComplaint(session);
-            } else {
-                await this.send(vendorId, phoneNumber, 'Sorry, the complaint could not be registered earlier. Please reply R to try again.');
-            }
         }
 
         if (handled) {
@@ -66,13 +56,13 @@ class ComplaintService {
         return ComplaintSession.findOne({
             vendor_id: vendorId,
             phone_number: phoneNumber,
-            status: { $in: ['collecting', 'ready'] }
+            status: 'collecting'
         }).sort({ createdAt: -1 });
     }
 
     async startComplaint(vendorId, phoneNumber) {
         await ComplaintSession.updateMany(
-            { vendor_id: vendorId, phone_number: phoneNumber, status: { $in: ['collecting', 'ready'] } },
+            { vendor_id: vendorId, phone_number: phoneNumber, status: 'collecting' },
             { status: 'cancelled', cancelled_at: new Date() }
         );
 
@@ -112,7 +102,6 @@ class ComplaintService {
         session.current_step += 1;
 
         if (session.current_step >= FIELD_DEFINITIONS.length) {
-            session.status = 'ready';
             await session.save();
             await this.submitComplaint(session);
         } else {
@@ -210,14 +199,15 @@ class ComplaintService {
             }
         }
 
-        session.status = 'ready';
+        session.status = 'failed';
         session.error_message = lastError ? lastError.message : 'Unknown error';
         await session.save();
 
+        console.error(`[COMPLAINT] Complaint NOT raised for ${session.phone_number}: ${this.classifyError(lastError)}`);
         await this.send(
             session.vendor_id,
             session.phone_number,
-            `Sorry, we could not register your complaint due to a network issue. Please reply R to try again. (${this.classifyError(lastError)})`
+            'Sorry, your complaint could not be raised right now. Please try again after some time.'
         );
     }
 

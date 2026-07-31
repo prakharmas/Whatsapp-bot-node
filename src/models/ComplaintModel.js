@@ -6,7 +6,7 @@ const complaintSessionSchema = new mongoose.Schema({
     phone_number: { type: String, required: true, index: true },
     status: {
         type: String,
-        enum: ['collecting', 'ready', 'submitted', 'cancelled'],
+        enum: ['collecting', 'submitted', 'cancelled', 'failed'],
         default: 'collecting'
     },
     current_step: { type: Number, default: 0 },
