@@ -8,7 +8,7 @@ const CRM_AUTH_TOKEN = process.env.CRM_AUTH_TOKEN || 'Njg3fDBiYzc1NmIyMTVkY2NkOG
 const FIELD_DEFINITIONS = [
     { key: 'name', label: 'Name', prompt: 'Please share your full name.' },
     { key: 'contact_number', label: 'Contact Number', prompt: 'Please share your contact number (10 digits).' },
-    { key: 'email', label: 'Email', prompt: 'Please share your email address.' },
+    { key: 'issue', label: 'Issue', prompt: 'Please describe the issue you are facing.' },
     { key: 'pin_code', label: 'Pin Code', prompt: 'Please share your PIN code (6 digits).' },
     { key: 'city', label: 'City', prompt: 'Please share your city.' },
     { key: 'state', label: 'State', prompt: 'Please share your state.' }
@@ -131,12 +131,6 @@ class ComplaintService {
                 }
                 return { valid: true, value: normalized };
             }
-            case 'email': {
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) {
-                    return { valid: false, message: 'Please enter a valid email address.' };
-                }
-                return { valid: true, value };
-            }
             case 'pin_code': {
                 const digits = value.replace(/\D/g, '');
                 if (digits.length !== 6) {
@@ -162,56 +156,83 @@ class ComplaintService {
     }
 
     async submitComplaint(session) {
-        try {
-            await this.send(session.vendor_id, session.phone_number, 'Please wait, registering your complaint...');
+        const payload = {
+            'Name': session.fields.name,
+            'Contact Number': session.fields.contact_number,
+            'Issue': session.fields.issue,
+            'Pin Code': session.fields.pin_code,
+            'City': session.fields.city,
+            'State': session.fields.state
+        };
 
-            const payload = {
-                'Name': session.fields.name,
-                'Contact Number': session.fields.contact_number,
-                'Email': session.fields.email,
-                'Pin Code': session.fields.pin_code,
-                'City': session.fields.city,
-                'State': session.fields.state
-            };
+        const MAX_ATTEMPTS = 3;
+        let lastError = null;
 
-            const response = await axios.post(this.crmApiUrl, payload, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Auth-Token': this.crmAuthToken
-                },
-                timeout: 30000
-            });
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                if (attempt === 1) {
+                    await this.send(session.vendor_id, session.phone_number, 'Please wait, registering your complaint...');
+                }
 
-            const data = response.data;
-            const srNumber = data['In Call Id'] || data.in_call_id || data.inCallId || data.sr_number || '';
+                const response = await axios.post(this.crmApiUrl, payload, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Auth-Token': this.crmAuthToken
+                    },
+                    timeout: 30000
+                });
 
-            session.status = 'submitted';
-            session.in_call_id = String(srNumber);
-            session.crm_response = data;
-            session.error_message = null;
-            session.submitted_at = new Date();
-            await session.save();
+                const data = response.data;
+                const srNumber = data['In Call Id'] || data.in_call_id || data.inCallId || data.sr_number || '';
 
-            let reply = '✅ Your complaint has been raised successfully.';
-            if (srNumber) {
-                reply += `\n\nYour SR number is: ${srNumber}`;
+                session.status = 'submitted';
+                session.in_call_id = String(srNumber);
+                session.crm_response = data;
+                session.error_message = null;
+                session.submitted_at = new Date();
+                await session.save();
+
+                let reply = '✅ Your complaint has been raised successfully.';
+                if (srNumber) {
+                    reply += `\n\nYour SR number is: ${srNumber}`;
+                }
+                reply += '\nOur team will contact you shortly.';
+                await this.send(session.vendor_id, session.phone_number, reply);
+
+                console.log(`[COMPLAINT] Complaint raised for ${session.phone_number}, SR number: ${srNumber}`);
+                return;
+            } catch (error) {
+                lastError = error;
+                console.error(`[COMPLAINT] CRM submission attempt ${attempt}/${MAX_ATTEMPTS} failed:`, error.message);
+                if (attempt < MAX_ATTEMPTS) {
+                    await this.sleep(attempt * 2000);
+                }
             }
-            reply += '\nOur team will contact you shortly.';
-            await this.send(session.vendor_id, session.phone_number, reply);
-
-            console.log(`[COMPLAINT] Complaint raised for ${session.phone_number}, SR number: ${srNumber}`);
-        } catch (error) {
-            session.status = 'ready';
-            session.error_message = error.message;
-            await session.save();
-            console.error('[COMPLAINT] CRM submission failed:', error.message);
-
-            await this.send(
-                session.vendor_id,
-                session.phone_number,
-                'Sorry, we could not register your complaint right now. Please reply R to try again.'
-            );
         }
+
+        session.status = 'ready';
+        session.error_message = lastError ? lastError.message : 'Unknown error';
+        await session.save();
+
+        await this.send(
+            session.vendor_id,
+            session.phone_number,
+            `Sorry, we could not register your complaint due to a network issue. Please reply R to try again. (${this.classifyError(lastError)})`
+        );
+    }
+
+    classifyError(error) {
+        if (!error) return 'unknown error';
+        if (error.response) return `CRM server error (HTTP ${error.response.status})`;
+        if (error.code === 'ECONNABORTED') return 'connection timeout';
+        if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') return 'host not reachable';
+        if (error.code === 'ECONNREFUSED') return 'connection refused';
+        if (error.code === 'ETIMEDOUT') return 'connection timed out';
+        return 'network issue';
+    }
+
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async send(vendorId, phoneNumber, text) {

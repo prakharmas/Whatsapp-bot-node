@@ -13,7 +13,7 @@ const complaintSessionSchema = new mongoose.Schema({
     fields: {
         name: { type: String },
         contact_number: { type: String },
-        email: { type: String },
+        issue: { type: String },
         pin_code: { type: String },
         city: { type: String },
         state: { type: String }
